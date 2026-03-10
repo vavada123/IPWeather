@@ -7,6 +7,16 @@ app = Flask(__name__)
 
 db = TinyDB('obiskovalci.json')  
 
+@app.route('/obiskovalci')
+def prikazi_obiskovalce():
+    with open('obiskovalci.json', 'r') as f:
+        data = json.load(f)
+    
+    vsi_obiski = data.get("_default", {})
+    
+    return render_template('obiskovalci.html', obiskovalci=vsi_obiski)
+
+
 @app.route('/') 
 def  index():  
     if request.headers.get('X-Forwarded-For'): 
