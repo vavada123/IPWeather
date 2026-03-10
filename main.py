@@ -1,21 +1,40 @@
 from flask import Flask, render_template, request
 from tinydb import TinyDB
+import requests
+import json
 
 app = Flask(__name__)
 
+db = TinyDB('obiskovalci.json')  
+
 @app.route('/') 
 def  index():  
-    return render_template('index.html')
-
     if request.headers.get('X-Forwarded-For'): 
-	    ip = request.headers.get('X-Forwarded-For').split(',')[0] 
+        ip = request.headers.get('X-Forwarded-For').split(',')[0]
     else:
-    	ip = request.remote_addr  
+        ip = request.remote_addr  
     print(ip)  # Za debugging return  f"Vaš IP je: {ip}"`
-	
-db = TinyDB('obiskovalci.json')
-db.insert({'IP' : '192.168.0.1', 'drzava' : 'Slovenia'})    
 
 
+    url = f"https://freeipapi.com/api/json/{ip}"
+    response = requests.get(url)
+    podatki = response.json()
+
+    lat = podatki.get('latitude')
+    lon = podatki.get('longitude')
+
+    urlweather = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&hourly=temperature_2m&current=temperature_2m&timezone=auto"
+    responseweather = requests.get(urlweather)
+    podatkiweather = responseweather.json()
+
+    kraj = podatki.get('cityName')
+    temperatura = podatkiweather.get('current', {}).get('temperature_2m')
+
+    db.insert({'IP' : ip, 'drzava' : kraj, 'temperatura' : temperatura})  
+
+    return render_template('index.html',ip=ip, kraj=kraj, temperatura=temperatura)
+
+
+
 	
-app.run(debug = True)
+app.run(host='0.0.0.0', port=5000, debug=True)
